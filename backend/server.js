@@ -3429,10 +3429,11 @@ if(dept.toLowerCase() === "accessories"){
   result.Accessories.completed = row.completed_count;
 }
 
+/* ACCOUNTS (PENDING FROM department_tat) */
 else if(dept === "Accounts"){
-  // Only keep delayed from department_tat
-  result.Accounts.delayed =
-    Number(row.delayed_count || 0) + Number(row.delayed_running_count || 0);
+  result.Accounts.pending = row.progress_count;
+ result.Accounts.delayed =
+  Number(row.delayed_count || 0) + Number(row.delayed_running_count || 0);
 }
 
 /* OTHER DEPARTMENTS */
@@ -3452,8 +3453,7 @@ else{
 const accountSql = `
 SELECT
 SUM(CASE WHEN type='Due' AND end_time IS NULL THEN 1 ELSE 0 END) AS due_count,
-SUM(CASE WHEN type='Refund' AND end_time IS NULL THEN 1 ELSE 0 END) AS refund_count,
-(SELECT COUNT(*) FROM payment_refer WHERE status='Pending') AS payment_pending
+SUM(CASE WHEN type='Refund' AND end_time IS NULL THEN 1 ELSE 0 END) AS refund_count
 FROM account_status
 `;
 
@@ -3462,10 +3462,6 @@ db.query(accountSql,(err,acc)=>{
 if(!err && acc.length>0){
   result.Accounts.due = acc[0].due_count || 0;
   result.Accounts.refund = acc[0].refund_count || 0;
-
-  // ✅ FIX HERE
-  result.Accounts.pending =
-    (result.Accounts.pending || 0) + (acc[0].payment_pending || 0);
 }
 
 
@@ -3534,22 +3530,6 @@ ELSE 'Completed'
 END AS status
 
 FROM account_status
-
-/* ✅ ADD THIS BLOCK EXACTLY HERE */
-UNION ALL
-
-/* payment_refer (Pending Payments) */
-SELECT
-customer_id,
-booking_id,
-'Accounts' AS department,
-created_at AS start_time,
-NULL AS end_time,
-NULL AS tat_days,
-'Pending' AS status
-FROM payment_refer
-WHERE status = 'Pending'
-
 UNION ALL
 
 /* Booking Cancelled */
@@ -3571,6 +3551,7 @@ FROM cancelled_booking_refunds
 
 ORDER BY start_time DESC
 `;
+
 db.query(tableSql,[SLA,SLA],(err,tableRows)=>{
 
 if(err){
@@ -3637,7 +3618,6 @@ table: tableRows
 });
 
 });
-
 
 
 app.post("/api/start-department", (req, res) => {
