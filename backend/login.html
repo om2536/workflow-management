@@ -154,7 +154,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 });
 async function loadDepartments(){
   try{
-    const res = await fetch("https://dealership-workflow-production.up.railway.app/api/departments");
+    const res = await fetch("https://workflow-management-production-6351.up.railway.app/api/departments");
     const data = await res.json();
 
     const deptSelect = document.getElementById("dept");
